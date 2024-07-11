@@ -1,21 +1,33 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using UnityEngine.WSA;
 
 public class TouchInput : MonoBehaviour
 {
+
+
+[SerializeField] private GameObject ballPrefab;
+[SerializeField] public Rigidbody2D rbPivot;
+[SerializeField] private float releaseTime = 0.15f;
+[SerializeField] private float repopTime = 5.0f;
+    
     private Camera mainCamera;
+    private bool isDragging = false;
 
-    public float releaseTime = 0.15f;
-    public Rigidbody2D rb;
-
-    private bool isPressed = false;
+private Rigidbody2D ballPrest;
+private SpringJoint2D ballSpringJoin;
 
     // Start is called before the first frame update
     void Start()
     {
         mainCamera = Camera.main;
+          spawnBall();  
+        
     }
 
     // Update is called once per frame
@@ -23,45 +35,66 @@ public class TouchInput : MonoBehaviour
     {
         if (Touchscreen.current.primaryTouch.press.isPressed)
         {
-            OnTouchDown();
+           if(isDragging)
+            {
+             LauncheBall();
+             Invoke(nameof(spawnBall),repopTime);
+             isDragging = false ;
+           } 
+           return;
         }
-        else
-        {
-            OnTouchUp();
-        }
-
-        if (isPressed)
-        {
+       isDragging = true;
+        
             Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
             Vector3 worldPosition = mainCamera.ScreenToWorldPoint(touchPosition);
             worldPosition.z = 0; // Ensure z position is 0 for 2D
-
-            rb.position = worldPosition;
-        }
+            rbPivot.isKinematic = true; 
+            rbPivot.position = worldPosition;
+        
     }
 
-    private void OnTouchDown()
+private void spawnBall()
+{
+    if (ballPrefab != null)
     {
-        if (!isPressed)
+        if(ballPrest!= null)
         {
-            isPressed = true;
-            rb.isKinematic = true;
+            Destroy(ballPrest);
         }
+         ballPrest = Instantiate(ballPrefab, rbPivot.transform.position);
+        rbPivot = ballPrest.GetComponent<Rigidbody2D>();
+        ballSpringJoin = ballPrest.GetComponent<SpringJoint2D>();
+        ballSpringJoin.connectedBody = rbPivot;
+    }
+}
+
+    private Rigidbody2D Instantiate(GameObject ballPrefab, Vector3 position)
+    {
+        throw new NotImplementedException();
     }
 
-    private void OnTouchUp()
+    private  void LauncheBall()
+{ if(rbPivot != null) {
+    rbPivot.isKinematic = false;
+    rbPivot = null ;
+    Invoke(nameof(DetachBall),releaseTime );
+}
+
+}
+private void DetachBall()
+{
+    if(rbPivot != null)
     {
-        if (isPressed)
-        {
-            isPressed = false;
-            rb.isKinematic = false;
-            StartCoroutine(Release());
-        }
+        rbPivot.isKinematic = false;
+        rbPivot = null;
+        Invoke(nameof(DetachBall),DetachBall);
+    }
+}
+
+    private void Invoke(string v, Action detachBall)
+    {
+        throw new NotImplementedException();
     }
 
-    private IEnumerator Release()
-    {
-        yield return new WaitForSeconds(releaseTime);
-        GetComponent<SpringJoint2D>().enabled = false;
-    }
+
 }
