@@ -6,32 +6,62 @@ using UnityEngine.InputSystem;
 public class TouchInput : MonoBehaviour
 {
     private Camera mainCamera;
-   [SerializeField] private Rigidbody2D ballRigidbody;
-    [SerializeField] private SpringJoint2D springJoint2;
+
+    public float releaseTime = 0.15f;
+    public Rigidbody2D rb;
+
+    private bool isPressed = false;
+
     // Start is called before the first frame update
     void Start()
     {
         mainCamera = Camera.main;
-        
     }
 
     // Update is called once per frame
     void Update()
     {
-        // Out the method if not touching the screen
-        if (!Touchscreen.current.primaryTouch.press.isPressed())
+        if (Touchscreen.current.primaryTouch.press.isPressed)
         {
-            return;
+            OnTouchDown();
+        }
+        else
+        {
+            OnTouchUp();
         }
 
-        Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
-        Vector3 worldPosition = mainCamera.ScreenToWorldPoint(touchPosition);
+        if (isPressed)
+        {
+            Vector2 touchPosition = Touchscreen.current.primaryTouch.position.ReadValue();
+            Vector3 worldPosition = mainCamera.ScreenToWorldPoint(touchPosition);
+            worldPosition.z = 0; // Ensure z position is 0 for 2D
 
-        Debug.Log("TOUCH POSITION: " + touchPosition);
-        Debug.Log("WORLD POSITION: " + worldPosition);
+            rb.position = worldPosition;
+        }
+    }
 
-        // Déplacer la balle à la position du toucher
-        ballRigidbody.position = new Vector2(worldPosition.x, worldPosition.y);
-   
- }
+    private void OnTouchDown()
+    {
+        if (!isPressed)
+        {
+            isPressed = true;
+            rb.isKinematic = true;
+        }
+    }
+
+    private void OnTouchUp()
+    {
+        if (isPressed)
+        {
+            isPressed = false;
+            rb.isKinematic = false;
+            StartCoroutine(Release());
+        }
+    }
+
+    private IEnumerator Release()
+    {
+        yield return new WaitForSeconds(releaseTime);
+        GetComponent<SpringJoint2D>().enabled = false;
+    }
 }
